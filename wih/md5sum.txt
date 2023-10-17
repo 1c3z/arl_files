@@ -1,3 +1,0 @@
-4cc29fdeb30bff10e884669d05cb9ae6 *wih.exe
-ad71226bfa79f8e21771764aab4678b3 *wih_darwin
-2a36996e138afa240ad7f7f69240c518 *wih_linux
