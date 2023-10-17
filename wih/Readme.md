@@ -242,6 +242,10 @@ exclude_rules:
     enabled: true
 
 
+## 已经集成到 ARL
+
+https://tophanttechnology.github.io/ARL-doc/function_desc/web_info_hunter/
+
 ```
 
 
