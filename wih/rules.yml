@@ -133,7 +133,9 @@ rules:
   - id: grafana_service_account_token
     enabled: true
     pattern: \bglsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8}\b
-
+  - id: app_key
+    enabled: true
+    pattern: \b(?:VUE|APP|REACT)_[A-Z_0-9]{1,15}_(?:KEY|PASS|PASSWORD|TOKEN|APIKEY)['"]*[:=]"(?:[A-Za-z0-9_\-]{15,50}|[a-z0-9/+]{50,100}==?)"
 
 # 排除规则， 支持字段 id, content, target , source 逻辑为 and ，如果是正则匹配，需要使用 regex: 开头
 exclude_rules:
@@ -148,3 +150,7 @@ exclude_rules:
     target: https://open.work.weixin.qq.com
     content: regex:Bearer\s+
     enabled: true
+
+  - name: "过滤来自首页的内容"
+    source_tag: page
+    enabled: false
