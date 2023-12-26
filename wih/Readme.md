@@ -1,20 +1,19 @@
 ## 介绍
 
-WebInfoHunter（简称 wih）工具是一款功能强大、易用性高、扩展性强的命令行工具。   
+WebInfoHunter（简称 wih）工具是一款功能强大、易用性高、扩展性强的命令行工具。
 
-可以快速地获取指定网页中的各种特定信息。采用 Golang 编写。  
+可以快速地获取指定网页中的各种特定信息。采用 Golang 编写。
 
-旨在快速批量地查找指定网页中 JS 中的各种特定信息，例如子域名、路径、URL、邮箱、IP、手机号、AK 和 SecretKey 等。  
+旨在快速批量地查找指定网页中 JS 中的各种特定信息，例如子域名、路径、URL、邮箱、IP、手机号、AK 和 SecretKey 等。
 
-wih 工具的规则非常灵活，可以根据自己的需求自定义规则，当前已经预设了 35 条规则。  
+wih 工具的规则非常灵活，可以根据自己的需求自定义规则，当前已经预设了 36 条规则。
 
-此外，wih 工具还支持对 JWT Token 的有效期进行检验，以及对云 API 中的 AK 和 SK 进行有效性检验，节省验证时间。 
+此外，wih 工具还支持对 JWT Token 的有效期进行检验，以及对云 API 中的 AK 和 SK 进行有效性检验，节省验证时间。
 
-wih 工具支持多种输出格式，包括文本、JSON、CSV、HTML 和 Markdown 等，可以根据自己的需求选择合适的格式进行输出。  
+wih 工具支持多种输出格式，包括文本、JSON、CSV、HTML 和 Markdown 等，可以根据自己的需求选择合适的格式进行输出。
 
-而且，wih 工具还支持自动根据站点URL保存输出结果，方便对结果来源进行查找，同时还可以将 AK 和 SK 检出结果单独保存，提高工作效率。  
+而且，wih 工具还支持自动根据站点URL保存输出结果，方便对结果来源进行查找，同时还可以将 AK 和 SK 检出结果单独保存，提高工作效率。
 
- 
 
 
 ## 命令行
@@ -24,22 +23,25 @@ Usage:
   WebInfoHunter（简称 wih） [flags]
 
 Flags:
-      --ak-sk-output string        AK/SK 单独保存的文件名。如果为空，则不单独保存 (default "ak_leak.txt")
+      --ak-sk-output string        AK/SK 单独保存的文件名 (default "ak_leak.txt")
   -a, --auto-save-name             根据站点自动生成保存的文件名
-  -c, --concurrency int            并发数(针对站点) (default 3)
+  -c, --concurrency int            并发数(针对站点) (default 2)
   -P, --concurrency-per-site int   每个站点的并发数 (default 3)
       --csv                        CSV 格式输出
-      --dial-timeout float         Dial timeout (s) (default 3)
-      --disable-ak-sk-output       是否禁止 AK/SK 单独保存
+      --dc                         禁止检查 AK/SK 有效性
+      --dial-timeout float         Dial timeout (s) (default 5)
+      --disable-ak-sk-output       禁止 AK/SK 单独保存
+      --disable-check-ak-sk        禁止检查 AK/SK 有效性
       --disable-color              disable log color
-  -f, --follow-redirect            是否跟随重定向
-  -G, --generate-rule              是否生成规则
+  -f, --follow-redirect            跟随重定向
+  -G, --generate-rule              生成规则
   -H, --header strings             Custom header (e.g. 'X-My-Header: value')
   -h, --help                       help for WebInfoHunter（简称
       --html                       HTML 格式输出
-      --limit-reader-size int      Maximum response size (in bytes) (default 5242880)
+      --limit-reader-size int      Maximum response size (in bytes) (default 10485760)
       --log-file string            Path to log file (default "-")
   -v, --log-level string           Log level (zero,debug,info,success,error) (default "info")
+  -M, --max-collect int            用于表示所有收集类型的最大收集数量, 对于每个站点 (default 600)
       --md                         Markdown 格式输出
   -o, --output string              结果输出文件的名称(- 为标准输出) (default "-")
   -J, --output-json                JSON 格式输出
@@ -48,7 +50,8 @@ Flags:
       --size int                   设置表格分页大小
   -t, --target string              目标URL或者文件
   -T, --text                       文本格式输出
-      --timeout float              Response timeout (s) (default 30)
+      --timeout float              Response timeout (s) (default 180)
+      --version                    显示版本
 
 ```
 
@@ -225,9 +228,12 @@ rules:
   - id: grafana_service_account_token
     enabled: true
     pattern: \bglsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8}\b
-
+  - id: app_key
+    enabled: true
+    pattern: \b(?:VUE|APP|REACT)_[A-Z_0-9]{1,15}_(?:KEY|PASS|PASSWORD|TOKEN|APIKEY)['"]*[:=]"(?:[A-Za-z0-9_\-]{15,50}|[a-z0-9/+]{50,100}==?)"
 
 # 排除规则， 支持字段 id, content, target , source 逻辑为 and ，如果是正则匹配，需要使用 regex: 开头
+# source 包括 page(网站首页), js (js 文件), system (系统生成)
 exclude_rules:
   # 排除站点 https://cc.163.com 中 类型为 secret_key 的内容
   - name: "不收集 cc.163.com 的 secret_key" # 排除规则名称，无实际意义
@@ -241,14 +247,26 @@ exclude_rules:
     content: regex:Bearer\s+
     enabled: true
 
-
-## 已经集成到 ARL
-
-https://tophanttechnology.github.io/ARL-doc/function_desc/web_info_hunter/
+  - name: "过滤来自首页的内容"
+    source_tag: page
+    enabled: false
 
 ```
 
 
 
+## 更新日志
 
+### 2023-12（v1.5.4-beta）
+
+- 新增：根据来源（source_tag）进行排除
+- 新增：命令行参数 --disable-check-ak-sk ，用于禁用 sk 有效性检测
+- 新增：规则 1 条
+- 修复：检验AK有效性时，如果不联网标记为(Network Error)
+- 修复：检验腾讯云 SK 有效时，正确输出 AppId
+
+## 已经集成到 ARL
+
+
+https://tophanttechnology.github.io/ARL-doc/function_desc/web_info_hunter/
 
